@@ -107,11 +107,14 @@ int main(void) {
  */
 void Get_input(int my_rank, int comm_sz, double* a_p, double* b_p,
       int* n_p) {
-   int i, c, divisor = comm_sz, core_difference = comm_sz/2;
+   int i, c, divisor, core_difference;
+   double res;
    
-   c = log(comm_sz)/log(2);
-   c = c+1;
-   printf("c %d e comm_sz %d\n", c, comm_sz);
+   res = log(comm_sz)/log(2);
+   c = ceil(res);
+   divisor = pow(2, c);
+   core_difference = divisor/2;
+   //printf("c %d e comm_sz %d\n", c, comm_sz);
    if(my_rank == 0){
       FILE *fp;
       fp = fopen("entrada.txt", "r");
@@ -123,19 +126,25 @@ void Get_input(int my_rank, int comm_sz, double* a_p, double* b_p,
 
    for(i = 0; i < c; i++){
       if (my_rank == 0 || my_rank%divisor == 0) {
-         printf("%d ---> %d\n", my_rank, my_rank+core_difference);
-         MPI_Send(a_p, 1, MPI_DOUBLE, my_rank+core_difference, 0, MPI_COMM_WORLD);
-         MPI_Send(b_p, 1, MPI_DOUBLE, my_rank+core_difference, 0, MPI_COMM_WORLD);
-         MPI_Send(n_p, 1, MPI_INT, my_rank+core_difference, 0, MPI_COMM_WORLD);
+         
+         if(my_rank+core_difference < comm_sz){
+
+            MPI_Send(a_p, 1, MPI_DOUBLE, my_rank+core_difference, 0, MPI_COMM_WORLD);
+            MPI_Send(b_p, 1, MPI_DOUBLE, my_rank+core_difference, 0, MPI_COMM_WORLD);
+            MPI_Send(n_p, 1, MPI_INT, my_rank+core_difference, 0, MPI_COMM_WORLD);   
+            //printf("%d ---> %d\n", my_rank, my_rank+core_difference);
+         }
+         
        
       } else if(my_rank%(divisor/2)==0) { /* my_rank != 0 */
-         printf("%d <--- %d\n", my_rank, my_rank-core_difference);
+         
          MPI_Recv(a_p, 1, MPI_DOUBLE, my_rank-core_difference, 0, MPI_COMM_WORLD,
                MPI_STATUS_IGNORE);
          MPI_Recv(b_p, 1, MPI_DOUBLE, my_rank-core_difference, 0, MPI_COMM_WORLD,
                MPI_STATUS_IGNORE);
          MPI_Recv(n_p, 1, MPI_INT, my_rank-core_difference, 0, MPI_COMM_WORLD,
                MPI_STATUS_IGNORE);
+         //printf("%d <--- %d\n", my_rank, my_rank-core_difference);
       }
 
       core_difference /=2;
